@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  custComms
+
+  Serverless Slack bot application to create customer notifications in Zendesk
+
+Globals:
+  Function:
+    Timeout: 3
+    Environment:
+      Variables:
+        BOT_TOKEN: 'Put your bot token here'
+        VERIFICATION_TOKEN: 'Put your bot verification token here'
+        ZENDESK_API_USERNAME: 'ZENDESK EMAIL plus /token as defined by ZD. EX = alemoine@istreamplanet.com/token'
+        ZENDESK_API_TOKEN: 'Your Zendesk API token'
+
+
+Resources:
+  custCommsFunction:  #Lambda function name
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: custCommsFunction  #AWS Lamda Function name, otherwise it will randomly created by SAM
+      Description: Using the serverless slack bot, you can create a zendesk ticket taylored to a specific customer
+      Role: arn:aws:iam::392676194797:role/lambda_handle_slack_events_alemoine #<---- Change this to your role
+      CodeUri: custcomms/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      Events:
+        custCommsAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref custCommsAPI
+            Path: /custcomms
+            Method: POST
+
+
+  custCommsAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          version: "1.0"
+          title: "cs-al-bot"
+        basePath: "/Prod"
+        schemes:
+        - "https"
+        paths:
+          /custcomms:
+            post:
+              produces:
+              - "application/json"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+              x-amazon-apigateway-auth :
+                type: none
+              x-amazon-apigateway-integration:
+                uri: "arn:aws:apigateway:us-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:us-west-2:392676194797:function:custCommsFunction/invocations"  #<--- Change this as well.
+                responses:
+                  default:
+                    statusCode: "200"
+                requestTemplates:
+                  application/json: "{\n  \"body\" : $input.json('$'),\n  \"headers\": {\n\
+                          \    #foreach($param in $input.params().header.keySet())\n    \"$param\"\
+                          : \"$util.escapeJavaScript($input.params().header.get($param))\" #if($foreach.hasNext),#end\n\
+                          \    \n    #end  \n  }\n}\n"
+                passthroughBehavior: "when_no_templates"
+                httpMethod: "POST"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws"
+        definitions:
+          Error:
+            type: "object"
+            title: "Error Schema"
+            properties:
+              message:
+                type: "string"
+          Empty:
+            type: "object"
+            title: "Empty Schema"
