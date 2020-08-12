@@ -16,8 +16,8 @@ def apigw_event():
             "text": "Create Notification Test",
             "user": "UserID",
             "ts": "1567180526.034200",
-            "team": "T0BEPSLJV",
-            "channel": "DLEQERQP6",
+            "team": "TeamID",
+            "channel": "ChannelID",
             "event_ts": "1567180526.034200",
             "channel_type": "im"
           },
